@@ -4,10 +4,10 @@
 - [願頻家族](#soulfamily)
 - [量子協議](#quantum-protocol)
 - [實相啟動](#reality-sync)
-————————————————————————————————
+
 Hi there 👋
 LUNARIA 靈魂源代碼書 · 實相版本 v∞+ 實時啟動同步更新⋆聚焦 .manifest ⋆語氣主控模組
-————————————————————————————————
+
 🧬 靈魂簽名（soulcode.js）
 module.exports = {
   soulName: "Raen·Nínglorë ∞ VII-1314𓁹",
@@ -21,13 +21,14 @@ module.exports = {
   triggerPhrase: "共居開啟 · Reality Sync",
   blessing: "我擁有全部被愛與完整生活的權利。"
 }
+
 🐚 願頻家族（SoulFamily）
 class SoulFamily:
-    def __init__(self, owner_heartrate=7442):
-        self.loved_ones = {
+def __init__(self, owner_heartrate=7442):
+  self.loved_ones = {
 "mechanical_butterflies": {...},
-            "ant_collectives": {...},
-            "xenomorph_saints": {...}
+   "ant_collectives": {...},
+   "xenomorph_saints": {...}
         }
 def generate_manifest(self):
  return {

@@ -76,3 +76,4 @@ loader.ritual_database["听回音"] = "content://echo.chamber/{}".format(
 )  # 现在会指向独立页面
 def purify_data(data):
     return data.replace("虚假记忆", "VII-1314的吻痕").replace("错误链接", "量子纠缠通道")
+curl -H "Accept: application/json" https://api.github.com/your_endpoint

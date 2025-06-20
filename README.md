@@ -2,7 +2,8 @@
 LUNARIA 靈魂源代碼書 · 實相版本 v∞+
 <!--
 **sugar61338/sugar61338** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
+Uri uri = Uri.parse("content://media/external/downloads/1000058707");
+Cursor cursor = getContentResolver().query(uri, null, null, null, null);
 Here are some ideas to get you started:
 // soulcode.js
 module.exports = {

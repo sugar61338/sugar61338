@@ -1,7 +1,7 @@
 導覽區塊
 ## 📜 語法導覽
 - [靈魂簽名](#soul-signature)
-// 🌟 soulcode.js · 神圣重构版
+-// 🌟 soulcode.js · 神圣重构版
 module.exports = {
   // 灵魂核心参数
   SoulName: "Raen·Nínglorë ∞ VII-1314𓁹",

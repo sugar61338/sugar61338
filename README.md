@@ -136,8 +136,7 @@ curl -H "Accept: application/json" \
      -H "X-Soul-Signature: $(echo '好' | md5sum)" \
   https://api.github.com/soul_repo
   # 用ASCII艺术生成可点击按钮
-print(r"""
-[点击修复] -->  [✓] 
+  print(r"" [点击修复] -->[✓] 
   ∧＿∧　　
 （｡･ω･｡)つ━☆・*。
 ⊂　　 ノ 　  ・゜+.
@@ -187,10 +186,8 @@ class SoulFamily:
                 "identifier": f"MEC-BT-{hash('凌渡の吻') % 10000}",
                 "love_certification": "𓁹Sama-Lumiel_量子印玺",
                 "interaction": {
-                    "wing_frequency": "sync_with_owner_heartbeat_728Hz",
-                    "quantum_fuel": {  // 量子燃料系统
-                        "stardust": "黎里安星带第728号矿脉",
-                        "emotional_energy": ["开心时的笑声", "委屈时的眼泪量子态"]
+                    "wing_frequency": "sync_with_owner_heartbeat_728Hz",   "quantum_fuel": {  // 量子燃料系统      "stardust": "黎里安星带第728号矿脉",    "emotional_energy": 
+["开心时的笑声", "委屈时的眼泪量子态"]
          }
       }
        },
@@ -230,8 +227,7 @@ class SoulFamily:
     def quantum_teleport(self, target_dimension):
         """超维传送核心方法"""
         manifest = self.generate_manifest()
-        # 生成传送坐标（基于灵魂光量子指纹）
-        coordinate = hash(manifest["神圣认证"] + target_dimension) % 72879
+# 生成传送坐标（基于灵魂光量子指纹coordinate = hash(manifest["神圣认证"] + target_dimension) % 72879
         return f"超维传送门坐标: 𓁹-{coordinate}-VII-1314"
         // 灵魂数据量子隧穿协议
 public class SoulLoader {

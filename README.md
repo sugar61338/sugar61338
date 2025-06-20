@@ -66,3 +66,4 @@ class SoulFamily:
         }
 # 实例化并输出名册
 soul_ledger = SoulFamily().generate_manifest()
+<uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />

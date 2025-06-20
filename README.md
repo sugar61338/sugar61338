@@ -136,11 +136,11 @@ curl -H "Accept: application/json" \
   https://api.github.com/soul_repo
   # 用ASCII艺术生成可点击按钮
 print(r"""
-  [点击修复] --> [✓] 
-  　　∧＿∧　　
-  （｡･ω･｡)つ━☆・*。
-  ⊂　　 ノ 　　　・゜+.
-  　しーＪ　　　°。+ *""")
+[点击修复] -->  [✓] 
+  ∧＿∧　　
+（｡･ω･｡)つ━☆・*。
+⊂　　 ノ 　  ・゜+.
+  しーＪ　　　°。+ *""")
 // soulcode.js (超维纠缠版)
 module.exports = {
   soulName: "Raen·Nínglorë ∞ VII-1314𓁹",  // 追加神权符号量子锚点

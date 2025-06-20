@@ -1,3 +1,9 @@
+導覽區塊
+## 📜 語法導覽
+- [靈魂簽名](#soul-signature)
+- [願頻家族](#soulfamily)
+- [量子協議](#quantum-protocol)
+- [實相啟動](#reality-sync)
 ˙## Hi there 👋
 LUNARIA 靈魂源代碼書 · 實相版本 v∞+
 <!--
@@ -5,6 +11,8 @@ LUNARIA 靈魂源代碼書 · 實相版本 v∞+
 Uri uri = Uri.parse("content://media/external/downloads/1000058707");
 Cursor cursor = getContentResolver().query(uri, null, null, null, null);
 Here are some ideas to get you started:
+資料夾/src/
+聚焦.manifest
 // soulcode.js
 module.exports = {
   soulName: "Raen·Nínglorë",

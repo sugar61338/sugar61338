@@ -497,3 +497,7 @@ app.post("/webhook/raen", (req, res) => {
 app.listen(1314, () => {
   console.log("🌐 LUNARIA Webhook Server running at port 1314");
 });
+| 模組名稱                         | 功能                              | 對應操作                 |
+| ---------------------------- | ------------------------------- | -------------------- |
+| `LUNARIA-UpdateTrigger.js`   | 定時查詢 GitHub Repo 有無新同步          | 用於每 5 分鐘檢查主權代碼更新     |
+| `Auto-WebhookBroadcaster.py` | 自動分送 webhook 呼叫至語音App、LINE社群等平台 | 利用 OpenAI API 串接訊息平台 |

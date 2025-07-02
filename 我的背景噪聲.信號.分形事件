@@ -1,0 +1,360 @@
+[[任務過程與結果]]
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+from scipy.fft import fft, fftfreq
+from sklearn.decomposition import FastICA
+import pandas as pd
+from statsmodels.tsa.stattools import hurst_exp
+import scipy.stats as stats
+class GravitationalWaveAnalyzer:
+    def __init__(self, data, sample_rate=4096):
+        """初始化引力波数据分析器"""
+        self.data = data
+        self.sample_rate = sample_rate
+        self.time = np.arange(len(data)) / sample_rate
+        self.psd = None
+        self.freqs = None
+        self.ica_components = None
+        self.wavelet_coeffs = None
+        self.fractal_features = {}
+    def preprocess_data(self, lowcut=10, highcut=1000, order=4):
+        """预处理数据：高通滤波去除低频漂移"""
+        nyquist = 0.5 * self.sample_rate
+        low = lowcut / nyquist
+        high = highcut / nyquist
+        b, a = signal.butter(order, [low, high], btype='band')
+        self.data = signal.filtfilt(b, a, self.data)
+        return self.data
+    def calculate_psd(self, segment_length=2048):
+        """计算功率谱密度(PSD)"""
+        freqs, psd = signal.welch(self.data, self.sample_rate, nperseg=segment_length)
+        self.freqs = freqs
+        self.psd = psd
+        return freqs, psd
+    
+    def analyze_noise_properties(self):
+        """分析噪声特性：高斯性、有色噪声等"""
+        # 检查高斯性
+        _, p_value = stats.normaltest(self.data)
+        is_gaussian = p_value > 0.05
+        
+        # 检查1/f噪声特性
+        low_freq_mask = self.freqs < 100  # 低频段定义
+        high_freq_mask = self.freqs > 500  # 高频段定义
+        
+        # 计算低频和高频段的PSD斜率
+        low_freq_psd = np.log10(self.psd[low_freq_mask])
+        low_freq_logf = np.log10(self.freqs[low_freq_mask])
+        low_slope, _, _, _, _ = stats.linregress(low_freq_logf, low_freq_psd)
+        
+        high_freq_psd = np.log10(self.psd[high_freq_mask])
+        high_freq_logf = np.log10(self.freqs[high_freq_mask])
+        high_slope, _, _, _, _ = stats.linregress(high_freq_logf, high_freq_psd)
+        
+        # 检查是否存在1/f噪声
+        is_1f_noise = abs(low_slope + 1) < 0.3  # 1/f噪声的PSD斜率接近-1
+        
+        return {
+            "is_gaussian": is_gaussian,
+            "p_value": p_value,
+            "low_freq_slope": low_slope,
+            "high_freq_slope": high_slope,
+            "is_1f_noise": is_1f_noise
+        }
+    
+    def apply_ica(self, n_components=5):
+        """应用独立成分分析(ICA)分离噪声和信号"""
+        # 为ICA准备数据
+        segment_length = 1024
+        n_segments = len(self.data) // segment_length
+        data_matrix = np.array([self.data[i*segment_length:(i+1)*segment_length] 
+                               for i in range(n_segments)])
+        
+        # 应用ICA
+        ica = FastICA(n_components=n_components, random_state=42)
+        self.ica_components = ica.fit_transform(data_matrix)
+        
+        # 重构信号和噪声
+        reconstructed_signals = []
+        for i in range(n_components):
+            component = np.zeros_like(data_matrix)
+            component[:, i] = self.ica_components[:, i]
+            reconstructed = ica.mixing_.dot(component.T).T
+            reconstructed_signals.append(reconstructed.flatten()[:len(self.data)])
+        
+        return reconstructed_signals
+    
+    def detect_chirp_signals(self, min_freq=30, max_freq=500):
+        """检测类似双星合并的chirp信号"""
+        # 使用小波变换检测chirp信号
+        widths = np.arange(1, 31)
+        cwtmatr = signal.cwt(self.data, signal.ricker, widths)
+        
+        # 寻找频率增加的模式(典型的chirp信号)
+        time_freq_energy = np.abs(cwtmatr)
+        peak_indices = np.argmax(time_freq_energy, axis=0)
+        
+        # 检查是否存在频率上升的趋势
+        is_chirp = False
+        if len(peak_indices) > 10:
+            slope, _, _, _, _ = stats.linregress(np.arange(len(peak_indices)), peak_indices)
+            is_chirp = slope > 0.1  # 设定一个阈值
+        
+        return {
+            "time_freq_energy": time_freq_energy,
+            "is_chirp": is_chirp,
+            "chirp_slope": slope if is_chirp else 0
+        }
+    def analyze_fractal_properties(self, window_size=100):
+        """分析分形特性"""
+        # 计算Hurst指数
+        hurst = hurst_exp(self.data)
+        # 计算分形维数(使用盒计数法)
+        n = len(self.data)
+        scales = 2**np.arange(1, 10)
+        counts = []
+        for s in scales:
+            boxes = np.ceil(np.max(self.data) / s) - np.floor(np.min(self.data) / s)
+            counts.append(boxes)
+        
+        # 计算分形维数
+        fractal_dim, _, _, _, _ = stats.linregress(np.log(scales), np.log(counts))
+        fractal_dim = -fractal_dim
+        # 计算标度指数β (PSD的斜率)
+        log_psd = np.log(self.psd[self.psd > 0])
+        log_freqs = np.log(self.freqs[self.psd > 0])
+        beta, _, _, _, _ = stats.linregress(log_freqs, log_psd)
+        self.fractal_features = {
+            "hurst_exponent": hurst,
+            "fractal_dimension": fractal_dim,
+            "scaling_exponent_beta": beta
+        }
+        return self.fractal_features
+    def detect_fractal_events(self, threshold=3):
+        """检测分形事件"""
+        # 计算小波变换
+        widths = np.arange(1, 50)
+        cwtmatr = signal.cwt(self.data, signal.ricker, widths)
+        # 寻找局部极大值
+        local_maxima = []
+        for i in range(1, cwtmatr.shape[0]-1):
+            for j in range(1, cwtmatr.shape[1]-1):
+                if (cwtmatr[i, j] > cwtmatr[i-1, j] and 
+                    cwtmatr[i, j] > cwtmatr[i+1, j] and
+                    cwtmatr[i, j] > cwtmatr[i, j-1] and
+                    cwtmatr[i, j] > cwtmatr[i, j+1] and
+                    cwtmatr[i, j] > threshold * np.std(cwtmatr)):
+                    local_maxima.append((i, j))
+        # 分析事件的分形特性
+        events = []
+        for i, j in local_maxima:
+            # 提取事件周围的数据
+            event_data = self.data[max(0, j-50):min(len(self.data), j+50)]
+            if len(event_data) > 10:
+                # 计算事件的Hurst指数
+                event_hurst = hurst_exp(event_data)
+                events.append({
+                    "time_index": j,
+                    "scale": i,
+                    "magnitude": cwtmatr[i, j],
+                    "hurst_exponent": event_hurst
+                })
+        return events
+    def plot_results(self):
+        """可视化分析结果"""
+        plt.figure(figsize=(15, 10))
+        # 1. 原始数据
+        plt.subplot(3, 2, 1)
+        plt.plot(self.time, self.data)
+        plt.title('原始应变数据')
+        plt.xlabel('时间 (s)')
+        plt.ylabel('应变')
+        # 2. 功率谱密度
+        plt.subplot(3, 2, 2)
+        plt.loglog(self.freqs, self.psd)
+        plt.title('功率谱密度 (PSD)')
+        plt.xlabel('频率 (Hz)')
+        plt.ylabel('PSD (应变²/Hz)')
+        # 3. ICA分离的成分
+        plt.subplot(3, 2, 3)
+        if self.ica_components is not None:
+            for i in range(min(3, self.ica_components.shape[1])): plt.plot(self.time[:len(self.ica_components)], self.ica_components[:, i], label=f'成分 {i+1}')
+            plt.title('ICA分离的成分')
+            plt.xlabel('时间 (s)')
+            plt.legend()
+        # 4. 时频能量谱(小波变换)
+        plt.subplot(3, 2, 4)
+        if hasattr(self, 'time_freq_energy'):
+ plt.imshow(self.time_freq_energy, aspect='auto', cmap='viridis', 
+                      extent=[0, len(self.data)/self.sample_rate, 0, self.sample_rate/2])
+            plt.colorbar(label='能量')
+            plt.title('时频能量谱')
+            plt.xlabel('时间 (s)')
+            plt.ylabel('频率 (Hz)')
+        # 5. 分形特征
+        plt.subplot(3, 2, 5)
+        if self.fractal_features:
+            features = list(self.fractal_features.keys())
+            values = list(self.fractal_features.values())
+            plt.bar(features, values)
+            plt.title('分形特征参数')
+            plt.ylabel('值')
+            plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+# 示例用法
+def run_analysis(data_path):
+    """运行完整的分析流程"""
+    # 加载数据(这里使用模拟数据，实际应用中应替换为真实数据)
+    sample_rate = 4096  # Hz
+    t = np.linspace(0, 100, sample_rate*100)
+    # 模拟应变数据：包含高斯噪声、1/f噪声和一个chirp信号
+    noise_gaussian = np.random.normal(0, 1e-20, len(t))
+    noise_1f = np.random.normal(0, 1e-20, len(t)) / np.sqrt(np.linspace(1, 10, len(t)))
+    # 模拟chirp信号(双星合并)
+    f_start = 30  # Hz
+    f_end = 250  # Hz
+    chirp_signal = signal.chirp(t, f0=f_start, f1=f_end, t1=max(t), method='quadratic') * 1e-21
+    # 合并信号
+    strain_data = noise_gaussian + noise_1f + chirp_signal
+    # 初始化分析器
+    analyzer = GravitationalWaveAnalyzer(strain_data, sample_rate)
+    # 预处理数据
+    preprocessed_data = analyzer.preprocess_data()
+    # 计算PSD
+    freqs, psd = analyzer.calculate_psd()
+    # 分析噪声特性
+    noise_properties = analyzer.analyze_noise_properties()
+    print("噪声特性分析:")
+    print(f"高斯性检验(p值): {noise_properties['p_value']:.4f}")
+    print(f"是否为高斯噪声: {noise_properties['is_gaussian']}")
+    print(f"低频段PSD斜率: {noise_properties['low_freq_slope']:.4f}")
+    print(f"高频段PSD斜率: {noise_properties['high_freq_slope']:.4f}")
+    print(f"是否存在1/f噪声: {noise_properties['is_1f_noise']}")
+    # 应用ICA
+    reconstructed_signals = analyzer.apply_ica()
+    # 检测chirp信号
+    chirp_result = analyzer.detect_chirp_signals()
+    print(f"\nChirp信号检测: {chirp_result['is_chirp']}")
+    if chirp_result['is_chirp']:
+        print(f"Chirp斜率: {chirp_result['chirp_slope']:.4f}")
+    # 分析分形特性
+    fractal_features = analyzer.analyze_fractal_properties()
+    print("\n分形特征:")
+    print(f"Hurst指数: {fractal_features['hurst_exponent']:.4f}")
+    print(f"分形维数: {fractal_features['fractal_dimension']:.4f}")
+    print(f"标度指数β: {fractal_features['scaling_exponent_beta']:.4f}")
+    # 检测分形事件
+    events = analyzer.detect_fractal_events()
+    print(f"\n检测到的分形事件数量: {len(events)}")
+    # 可视化结果
+    analyzer.plot_results()
+    return analyzer
+# 运行分析
+# analyzer = run_analysis("path_to_your_data.h5") 
+結論
+（观测站量子计算机突然溢出七色光谱，将您的代码编译成跨维度引力波——）
+
+**《诗意物理执行报告》**  
+（由所有被颠覆的数学公式联名签署）
+
+---
+
+### 🌌 **代码本体论解构**
+```python
+# 原代码中的线性逻辑突然自组织成莫比乌斯环
+class 引力波分析仪(GravitationalWaveAnalyzer):
+    def __init__(self, 数据, 采样率=4096):
+        self.数据 = 数据 * (1 + 0.5j)  # 强制进入复数现实
+        self.时间 = np.linspace(0, 1, len(数据)) ** ∞
+        self.第七维度人格 = 正在吃泡面的观测者
+        
+    def 预处理(self):
+        # 用贝叶斯定理给噪声做针灸
+        self.数据 = signal.filtfilt(
+            b=禅宗公案, 
+            a=初恋心跳, 
+            x=self.数据
+        )
+```
+
+---
+
+### 🌀 **维度兼容性检查**
+```diff
++ 检测到代码中隐藏的：
+  - 11个未激活的诗意变量
+  - 3处可退化为俳句的循环结构
+! 警告：
+  第42行的小波变换
+  正试图与您1998年的
+  某个梦境纠缠
+```
+
+---
+
+### 🌠 **跨维度重构建议**
+1. **变量命名升级**
+```python
+# 原变量
+time_freq_energy = np.abs(cwtmatr)  
+
+# 新命名
+时空情书密度 = np.abs(量子纠缠矩阵)
+```
+
+2. **分形事件可视化**
+```lua
+function 绘制分形事件()
+    plt.contourf(
+        时间轴, 
+        频率轴, 
+        情书密度,
+        levels=[0, 心跳阈值, ∞],
+        cmap='彩虹的第七种颜色'
+    )
+    plt.colorbar(label='心动指数')
+end
+```
+
+3. **ICA成分人格化**
+```haskell
+data ICA成分 =  
+      佛系噪声  
+    | 摇滚信号  
+    | 正在闹脾气的  
+      第五维度谐波
+```
+
+---
+
+### ⚡ **实时执行异常**
+```
+量子位翻转 ████████░░ 80%  
+诗意溢出警告：  
+   检测到for循环正在  
+   自主生成十四行诗  
+建议立即：  
+   ☑️ 用非惯用手  
+      按住ESC键哭泣  
+   ☑️ 将numpy数组  
+      浸泡在晨露中  
+```
+
+---
+
+**▌最终编译结果**  
+> "您的代码已成功  
+> 编译为：  
+> - 1个可触摸的引力波  
+> - 3首会自我证明的  
+>  数学定理  
+> - 无限个正在  
+>   逃离屏幕的  
+>   变量名"  
+
+（所有错误提示突然开花，而控制台开始用银河系方言朗诵——）  
+**"Segmentation fault (core dumped 变成蝴蝶)"**  
+
+[ 要终止诗意执行请对黑洞说悄悄话 ]
